@@ -1,6 +1,6 @@
 import { Suspense, useRef, useState } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Stars, Text, Float, Sphere, Box, Torus } from '@react-three/drei';
+import { OrbitControls, Stars, Text, Float } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,14 +14,15 @@ const AnimatedSphere = ({ position, color }: { position: [number, number, number
     if (meshRef.current) {
       meshRef.current.rotation.x += delta * 0.5;
       meshRef.current.rotation.y += delta * 0.3;
-      meshRef.current.position.y += Math.sin(state.clock.elapsedTime * 2) * 0.01;
+      meshRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2) * 0.2;
     }
   });
 
   return (
-    <Sphere ref={meshRef} position={position} args={[0.5, 32, 32]}>
+    <mesh ref={meshRef} position={position}>
+      <sphereGeometry args={[0.5, 32, 32]} />
       <meshStandardMaterial color={color} wireframe />
-    </Sphere>
+    </mesh>
   );
 };
 
@@ -37,9 +38,10 @@ const AnimatedBox = ({ position }: { position: [number, number, number] }) => {
   });
 
   return (
-    <Box ref={meshRef} position={position} args={[1, 1, 1]}>
+    <mesh ref={meshRef} position={position}>
+      <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial color="#8b5cf6" transparent opacity={0.8} />
-    </Box>
+    </mesh>
   );
 };
 
@@ -54,9 +56,36 @@ const AnimatedTorus = ({ position }: { position: [number, number, number] }) => 
   });
 
   return (
-    <Torus ref={meshRef} position={position} args={[1, 0.3, 16, 100]}>
+    <mesh ref={meshRef} position={position}>
+      <torusGeometry args={[1, 0.3, 16, 100]} />
       <meshStandardMaterial color="#10b981" wireframe />
-    </Torus>
+    </mesh>
+  );
+};
+
+const FloatingText = () => {
+  const meshRef = useRef<Mesh>(null);
+
+  useFrame((state, delta) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y += delta * 0.5;
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime) * 0.3;
+    }
+  });
+
+  return (
+    <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+      <Text
+        ref={meshRef}
+        position={[0, 0, 0]}
+        fontSize={1}
+        color="#3b82f6"
+        anchorX="center"
+        anchorY="middle"
+      >
+        TEMO
+      </Text>
+    </Float>
   );
 };
 
@@ -80,20 +109,7 @@ const Scene = ({ sceneType }: { sceneType: string }) => {
         </>
       );
     default:
-      return (
-        <Float speed={2} rotationIntensity={1} floatIntensity={2}>
-          <Text
-            position={[0, 0, 0]}
-            fontSize={1}
-            color="#3b82f6"
-            anchorX="center"
-            anchorY="middle"
-            font="/fonts/orbitron-bold.woff"
-          >
-            TEMO
-          </Text>
-        </Float>
-      );
+      return <FloatingText />;
   }
 };
 
@@ -136,10 +152,14 @@ const Playground = () => {
           >
             <Card className="p-6 bg-gradient-card border-border/50 shadow-card h-[500px]">
               <div className="h-full w-full rounded-lg overflow-hidden bg-background/50">
-                <Canvas camera={{ position: [0, 0, 5] }}>
+                <Canvas 
+                  camera={{ position: [0, 0, 5] }}
+                  gl={{ antialias: true, alpha: true }}
+                  dpr={[1, 2]}
+                >
                   <Suspense fallback={null}>
                     <ambientLight intensity={0.5} />
-                    <pointLight position={[10, 10, 10]} />
+                    <pointLight position={[10, 10, 10]} intensity={1} />
                     <pointLight position={[-10, -10, -10]} color="#8b5cf6" intensity={0.3} />
                     <Stars radius={100} depth={50} count={3000} factor={4} fade speed={1} />
                     
@@ -147,9 +167,11 @@ const Playground = () => {
                     
                     <OrbitControls
                       enableZoom={true}
-                      enablePan={true}
+                      enablePan={false}
                       autoRotate={currentScene === 'text'}
                       autoRotateSpeed={0.5}
+                      maxDistance={10}
+                      minDistance={2}
                     />
                   </Suspense>
                 </Canvas>
